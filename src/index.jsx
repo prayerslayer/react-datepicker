@@ -4,11 +4,9 @@ import PropTypes from "prop-types";
 import PopperComponent, { popperPlacementPositions } from "./popper_component";
 import classnames from "classnames";
 import {
-  newDate,
   now,
   cloneDate,
-  isMoment,
-  isDate,
+  isValid,
   isBefore,
   isAfter,
   setTime,
@@ -29,9 +27,10 @@ import {
   isDayInRange,
   getEffectiveMinDate,
   getEffectiveMaxDate,
-  parseDate,
-  safeDateFormat,
-  getHightLightDaysMap
+  safeParseDate,
+  safeFormatDate,
+  getHighLightDaysMap,
+  getDefaultLocale
 } from "./date_utils";
 import onClickOutside from "react-onclickoutside";
 
@@ -54,7 +53,7 @@ export default class DatePicker extends React.Component {
     customInput: PropTypes.element,
     customInputRef: PropTypes.string,
     // eslint-disable-next-line react/no-unused-prop-types
-    dateFormat: PropTypes.oneOfType([PropTypes.string, PropTypes.array]),
+    dateFormat: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
     dateFormatCalendar: PropTypes.string,
     dayClassName: PropTypes.func,
     disabled: PropTypes.bool,
@@ -113,7 +112,6 @@ export default class DatePicker extends React.Component {
     timeCaption: PropTypes.string,
     title: PropTypes.string,
     todayButton: PropTypes.string,
-    useWeekdaysShort: PropTypes.bool,
     utcOffset: PropTypes.number,
     value: PropTypes.string,
     weekLabel: PropTypes.string,
@@ -133,12 +131,13 @@ export default class DatePicker extends React.Component {
   static get defaultProps() {
     return {
       allowSameDay: false,
-      dateFormat: "L",
-      dateFormatCalendar: "MMMM YYYY",
+      dateFormat: "MM/dd/yyyy",
+      dateFormatCalendar: "MMMM yyyy",
       onChange() {},
       disabled: false,
       disabledKeyboardNavigation: false,
       dropdownMode: "scroll",
+      locale: getDefaultLocale(),
       onFocus() {},
       onBlur() {},
       onKeyDown() {},
@@ -169,7 +168,7 @@ export default class DatePicker extends React.Component {
     }
     if (this.props.highlightDates !== nextProps.highlightDates) {
       this.setState({
-        highlightDates: getHightLightDaysMap(nextProps.highlightDates)
+        highlightDates: getHighLightDaysMap(nextProps.highlightDates)
       });
     }
     if (!this.state.focused) this.setState({ inputValue: null });
@@ -181,11 +180,11 @@ export default class DatePicker extends React.Component {
 
   getPreSelection = () =>
     this.props.openToDate
-      ? newDate(this.props.openToDate)
+      ? cloneDate(this.props.openToDate)
       : this.props.selectsEnd && this.props.startDate
-        ? newDate(this.props.startDate)
+        ? cloneDate(this.props.startDate)
         : this.props.selectsStart && this.props.endDate
-          ? newDate(this.props.endDate)
+          ? cloneDate(this.props.endDate)
           : now(this.props.utcOffset);
 
   calcInitialState = () => {
@@ -202,11 +201,11 @@ export default class DatePicker extends React.Component {
       open: this.props.startOpen || false,
       preventFocus: false,
       preSelection: this.props.selected
-        ? newDate(this.props.selected)
+        ? cloneDate(this.props.selected)
         : boundedPreSelection,
       // transforming highlighted days (perhaps nested array)
       // to flat Map for faster access in day.jsx
-      highlightDates: getHightLightDaysMap(this.props.highlightDates),
+      highlightDates: getHighLightDaysMap(this.props.highlightDates),
       focused: false
     };
   };
@@ -288,7 +287,7 @@ export default class DatePicker extends React.Component {
       }
     }
     this.setState({ inputValue: event.target.value });
-    const date = parseDate(event.target.value, this.props);
+    const date = safeParseDate(event.target.value, this.props);
     if (date || !event.target.value) {
       this.setSelected(date, event, true);
     }
@@ -326,8 +325,8 @@ export default class DatePicker extends React.Component {
       if (changedDate !== null) {
         if (this.props.selected) {
           let selected = this.props.selected;
-          if (keepInput) selected = newDate(changedDate);
-          changedDate = setTime(newDate(changedDate), {
+          if (keepInput) selected = cloneDate(changedDate);
+          changedDate = setTime(cloneDate(changedDate), {
             hour: getHour(selected),
             minute: getMinute(selected),
             second: getSecond(selected)
@@ -399,13 +398,10 @@ export default class DatePicker extends React.Component {
       }
       return;
     }
-    const copy = newDate(this.state.preSelection);
+    const copy = cloneDate(this.state.preSelection);
     if (eventKey === "Enter") {
       event.preventDefault();
-      if (
-        isMoment(this.state.preSelection) ||
-        isDate(this.state.preSelection)
-      ) {
+      if (isValid(this.state.preSelection)) {
         this.handleSelect(copy, event);
         !this.props.shouldCloseOnSelect && this.setPreSelection(copy);
       } else {
@@ -486,7 +482,6 @@ export default class DatePicker extends React.Component {
         adjustDateOnChange={this.props.adjustDateOnChange}
         setOpen={this.setOpen}
         dateFormat={this.props.dateFormatCalendar}
-        useWeekdaysShort={this.props.useWeekdaysShort}
         dropdownMode={this.props.dropdownMode}
         selected={this.props.selected}
         preSelection={this.state.preSelection}
@@ -557,7 +552,7 @@ export default class DatePicker extends React.Component {
         ? this.props.value
         : typeof this.state.inputValue === "string"
           ? this.state.inputValue
-          : safeDateFormat(this.props.selected, this.props);
+          : safeFormatDate(this.props.selected, this.props);
 
     return React.cloneElement(customInput, {
       [customInputRef]: input => {

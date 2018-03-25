@@ -4,9 +4,12 @@ import classnames from "classnames";
 import {
   getDay,
   getMonth,
-  getDate,
+  getWeekDay,
+  formatDate,
   now,
   isSameDay,
+  isSameOrBefore,
+  isSameOrAfter,
   isDayDisabled,
   isDayInRange,
   getDayOfWeekCode
@@ -60,7 +63,7 @@ export default class Day extends React.Component {
     }
 
     // Looking for className in the Map of {'day string, 'className'}
-    const dayStr = day.format("MM.DD.YYYY");
+    const dayStr = formatDate(day, "MM.dd.yyyy");
     return highlightDates.get(dayStr);
   };
 
@@ -86,11 +89,11 @@ export default class Day extends React.Component {
       return false;
     }
 
-    if (selectsStart && endDate && selectingDate.isSameOrBefore(endDate)) {
+    if (selectsStart && endDate && isSameOrBefore(selectingDate, endDate)) {
       return isDayInRange(day, selectingDate, endDate);
     }
 
-    if (selectsEnd && startDate && selectingDate.isSameOrAfter(startDate)) {
+    if (selectsEnd && startDate && isSameOrAfter(selectingDate, startDate)) {
       return isDayInRange(day, startDate, selectingDate);
     }
 
@@ -142,8 +145,8 @@ export default class Day extends React.Component {
   };
 
   isWeekend = () => {
-    const weekday = getDay(this.props.day);
-    return weekday === 0 || weekday === 6;
+    const weekday = getWeekDay(this.props.day);
+    return weekday === 6 || weekday === 7;
   };
 
   isOutsideMonth = () => {
@@ -187,10 +190,10 @@ export default class Day extends React.Component {
         className={this.getClassNames(this.props.day)}
         onClick={this.handleClick}
         onMouseEnter={this.handleMouseEnter}
-        aria-label={`day-${getDate(this.props.day)}`}
+        aria-label={`day-${getDay(this.props.day)}`}
         role="option"
       >
-        {getDate(this.props.day)}
+        {getDay(this.props.day)}
       </div>
     );
   }

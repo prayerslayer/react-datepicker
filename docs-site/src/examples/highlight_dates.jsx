@@ -1,6 +1,6 @@
 import React from "react";
 import DatePicker from "react-datepicker";
-import moment from "moment";
+import { DateTime } from "luxon";
 
 export default class highlightDates extends React.Component {
   state = {
@@ -26,7 +26,7 @@ export default class highlightDates extends React.Component {
             <br />
             <strong>
               {
-                'highlightDates={[moment().subtract(7, "days"), moment().add(7, "days")]}'
+                "highlightDates={[DateTime.local().minus({ days: 7 }), DateTime.local().plus({ days: 7 })]}"
               }
             </strong>
             <br />
@@ -40,10 +40,11 @@ export default class highlightDates extends React.Component {
             selected={this.state.startDate}
             onChange={this.handleChange}
             highlightDates={[
-              moment().subtract(7, "days"),
-              moment().add(7, "days")
+              DateTime.local().minus({ days: 7 }),
+              DateTime.local().plus({ days: 7 })
             ]}
-            placeholderText="This highlights a week ago and a week from today"/>
+            placeholderText="This highlights a week ago and a week from today"
+          />
         </div>
       </div>
     );
